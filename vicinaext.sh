@@ -41,7 +41,7 @@ trap 'printf "\nScript interrupted by user. Please clean up any temporary files 
 # Constants
 #
 VICINAE_EXTENSIONS_DIR="$HOME/.local/share/vicinae/extensions"
-VICINAEXT_VERSION="1.0.0"
+VICINAEXT_VERSION="1.0.1"
 GITHUB_API_URL="https://api.github.com/repos/dagimg-dot/vicinaext/releases/latest"
 
 # Color definitions
