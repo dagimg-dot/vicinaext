@@ -24,7 +24,7 @@ eget dagimg-dot/vicinaext --to $HOME/.local/bin
 
 ```bash
 # Download and install to local bin
-curl -L -o $HOME/.local/bin/vicinaext https://github.com/yourusername/vicinaext/raw/main/vicinaext.sh
+curl -L -o $HOME/.local/bin/vicinaext https://github.com/dagimg-dot/vicinaext/raw/main/vicinaext.sh
 chmod +x $HOME/.local/bin/vicinaext
 
 # Ensure ~/.local/bin is in your PATH
@@ -33,7 +33,7 @@ chmod +x $HOME/.local/bin/vicinaext
 ### Use as Local Script
 
 ```bash
-curl -L -o vicinaext.sh https://github.com/yourusername/vicinaext/raw/main/vicinaext.sh
+curl -L -o vicinaext.sh https://github.com/dagimg-dot/vicinaext/raw/main/vicinaext.sh
 chmod +x vicinaext.sh
 
 ./vicinaext.sh --help
