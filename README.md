@@ -95,8 +95,11 @@ vicinaext -b develop https://github.com/user/extension.git
 # Combine options
 vicinaext -p pnpm -o /custom/extensions -b feature-branch https://github.com/user/repo.git extensions/theme
 
-# Check version information
+# Check version information and available updates
 vicinaext --version
+
+# Update the script to the latest version
+vicinaext --update-script
 
 # Get help
 vicinaext --help
@@ -131,18 +134,20 @@ vicinaext https://github.com/user/monorepo.git extensions/my-extension
   - `npm` - Node Package Manager (default)
   - `yarn` - Alternative package manager
   - `pnpm` - Performant package manager
+  - `bun` - Fast JavaScript runtime
 - `find` - For locating built files
+- `jq` and `wget` - For script updates (optional)
 
 ## 📦 Package Manager Support
 
 vicinaext supports multiple JavaScript package managers:
 
-| Package Manager | Install Command | Build Command | Notes |
-|----------------|-----------------|---------------|-------|
-| **npm** (default) | `npm install` | `npm run build` | Most common, fallback to `npx vici build` |
-| **yarn** | `yarn install` | `yarn build` | Alternative to npm, faster for some workflows |
-| **pnpm** | `pnpm install` | `pnpm build` | Space-efficient, faster installs |
-| **bun** | `bun install` | `bun run build` | Fast JavaScript runtime, fallback to `bunx vici build` |
+| Package Manager   | Install Command | Build Command   | Notes                                                  |
+| ----------------- | --------------- | --------------- | ------------------------------------------------------ |
+| **npm** (default) | `npm install`   | `npm run build` | Most common, fallback to `npx vici build`              |
+| **yarn**          | `yarn install`  | `yarn build`    | Alternative to npm, faster for some workflows          |
+| **pnpm**          | `pnpm install`  | `pnpm build`    | Space-efficient, faster installs                       |
+| **bun**           | `bun install`   | `bun run build` | Fast JavaScript runtime, fallback to `bunx vici build` |
 
 Use the `-p` option to specify your preferred package manager:
 ```bash

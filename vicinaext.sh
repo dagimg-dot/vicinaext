@@ -30,10 +30,11 @@ trap 'printf "\nScript interrupted by user. Please clean up any temporary files 
 #H#
 #H# Options:
 #H#   -h --help            Shows this message
-#H#   -v --version         Shows the current script version
+#H#   -v --version         Shows the current script version and checks for updates
 #H#   -o --output <dir>    Output directory for extensions (default: ~/.local/share/vicinae/extensions)
 #H#   -p --package-manager <pm> Package manager to use (npm, yarn, pnpm, bun) (default: npm)
 #H#   -b --branch <branch> Git branch to clone (default: main or master)
+#H#   -s --update-script   Updates the script to the latest version
 #H#
 
 #
@@ -41,6 +42,7 @@ trap 'printf "\nScript interrupted by user. Please clean up any temporary files 
 #
 VICINAE_EXTENSIONS_DIR="$HOME/.local/share/vicinae/extensions"
 VICINAEXT_VERSION="1.0.0"
+GITHUB_API_URL="https://api.github.com/repos/dagimg-dot/vicinaext/releases/latest"
 
 # Color definitions
 GREEN='\033[0;32m'
@@ -70,12 +72,65 @@ print_success() {
     print_color "$GREEN" "$1"
 }
 
+getLatestScriptVersion() {
+    latest_version=$(wget -qO- "$GITHUB_API_URL" | jq -r '.tag_name' 2>/dev/null | sed 's/^v//')
+    if [ -n "$latest_version" ]; then
+        echo "$latest_version"
+        return 0
+    else
+        return 1
+    fi
+}
+
+get_install_command() {
+    local package_manager="$1"
+    case "$package_manager" in
+    npm) echo "npm install" ;;
+    yarn) echo "yarn install" ;;
+    pnpm) echo "pnpm install" ;;
+    bun) echo "bun install" ;;
+    *) echo "npm install" ;; # fallback
+    esac
+}
+
+get_build_command() {
+    local package_manager="$1"
+    case "$package_manager" in
+    npm) echo "npm run build" ;;
+    yarn) echo "yarn run build" ;;
+    pnpm) echo "pnpm run build" ;;
+    bun) echo "bun run build" ;;
+    *) echo "npm run build" ;; # fallback
+    esac
+}
+
+get_exec_command() {
+    local package_manager="$1"
+    case "$package_manager" in
+    npm) echo "npx" ;;
+    yarn) echo "yarn run" ;;
+    pnpm) echo "pnpm dlx" ;;
+    bun) echo "bunx" ;;
+    *) echo "npx" ;; # fallback
+    esac
+}
+
 check_dependencies() {
-    local deps=("git" "npm" "find" "cp")
-    for dep in "${deps[@]}"; do
+    local base_deps=("git" "npm" "find" "cp")
+    local optional_deps=("jq" "wget")
+
+    # Check base dependencies (always required)
+    for dep in "${base_deps[@]}"; do
         if ! command -v "$dep" >/dev/null 2>&1; then
             print_error "$dep is not installed (required for extension installation)"
             exit 1
+        fi
+    done
+
+    # Check optional dependencies (required for updates)
+    for dep in "${optional_deps[@]}"; do
+        if ! command -v "$dep" >/dev/null 2>&1; then
+            print_warning "$dep is not installed (required for script updates)"
         fi
     done
 }
@@ -180,86 +235,31 @@ build_extension() {
         return 1
     fi
 
+    install_cmd=$(get_install_command "$package_manager")
     echo "Installing dependencies with $package_manager..."
-    case "$package_manager" in
-    npm)
-        if ! npm install; then
-            print_error "Failed to install dependencies with npm"
-            return 1
-        fi
-        ;;
-    yarn)
-        if ! yarn install; then
-            print_error "Failed to install dependencies with yarn"
-            return 1
-        fi
-        ;;
-    pnpm)
-        if ! pnpm install; then
-            print_error "Failed to install dependencies with pnpm"
-            return 1
-        fi
-        ;;
-    bun)
-        if ! bun install; then
-            print_error "Failed to install dependencies with bun"
-            return 1
-        fi
-        ;;
-    esac
+    if ! $install_cmd; then
+        print_error "Failed to install dependencies with $package_manager"
+        return 1
+    fi
 
     # Create the output directory if it doesn't exist
     mkdir -p "$output_dir"
 
     echo "Building extension with $package_manager..."
 
-    # Try package manager specific build commands
-    case "$package_manager" in
-    npm)
-        if npm run build -- -o "$output_dir" 2>/dev/null; then
-            print_success "Built successfully with 'npm run build'"
-        elif npx vici build -o "$output_dir" 2>/dev/null; then
-            print_success "Built successfully with 'npx vici build'"
-        else
-            print_error "Failed to build extension. Neither 'npm run build' nor 'npx vici build' worked"
-            print_warning "Check the extension's build scripts in package.json"
-            return 1
-        fi
-        ;;
-    yarn)
-        if yarn run build -- -o "$output_dir" 2>/dev/null; then
-            print_success "Built successfully with 'yarn build'"
-        elif yarn run vici build -o "$output_dir" 2>/dev/null; then
-            print_success "Built successfully with 'yarn run vici build'"
-        else
-            print_error "Failed to build extension. Neither 'yarn build' nor 'yarn run vici build' worked"
-            print_warning "Check the extension's build scripts in package.json"
-            return 1
-        fi
-        ;;
-    pnpm)
-        if pnpm run build -- -o "$output_dir" 2>/dev/null; then
-            print_success "Built successfully with 'pnpm build'"
-        elif pnpm dlx vici build -o "$output_dir" 2>/dev/null; then
-            print_success "Built successfully with 'pnpm exec vici build'"
-        else
-            print_error "Failed to build extension. Neither 'pnpm build' nor 'pnpm exec vici build' worked"
-            print_warning "Check the extension's build scripts in package.json"
-            return 1
-        fi
-        ;;
-    bun)
-        if bun run build -- -o "$output_dir" 2>/dev/null; then
-            print_success "Built successfully with 'bun run build'"
-        elif bunx vici build -o "$output_dir" 2>/dev/null; then
-            print_success "Built successfully with 'bunx vici build'"
-        else
-            print_error "Failed to build extension. Neither 'bun run build' nor 'bunx vici build' worked"
-            print_warning "Check the extension's build scripts in package.json"
-            return 1
-        fi
-        ;;
-    esac
+    build_cmd=$(get_build_command "$package_manager")
+    exec_cmd=$(get_exec_command "$package_manager")
+
+    # Try package manager specific build command with output flag
+    if $build_cmd -- -o "$output_dir" 2>/dev/null; then
+        print_success "Built successfully with '$build_cmd'"
+    elif $exec_cmd vici build -o "$output_dir" 2>/dev/null; then
+        print_success "Built successfully with '$exec_cmd vici build'"
+    else
+        print_error "Failed to build extension. Neither '$build_cmd' nor '$exec_cmd vici build' worked"
+        print_warning "Check the extension's build scripts in package.json"
+        return 1
+    fi
 }
 
 # Main installation function
@@ -328,9 +328,58 @@ install_extension() {
     echo "Location: $target_dir"
 }
 
+updateScript() {
+    version=$(getLatestScriptVersion)
+
+    if [ -z "$version" ]; then
+        echo "Error: Failed to determine version to download" >&2
+        return 1
+    fi
+
+    # Get the download URL from the release assets
+    download_url=$(
+        wget -qO- "$GITHUB_API_URL" |
+            jq -r '.assets[] | select(.name == "vicinaext.sh") | .browser_download_url'
+    )
+
+    if [ -z "$download_url" ]; then
+        echo "Error: Failed to find download URL for vicinaext.sh" >&2
+        return 1
+    fi
+
+    echo "Downloading vicinaext.sh version ${version}..."
+
+    # Download to a temporary file in the same directory
+    script_dir=$(dirname "$0")
+    temp_file="${script_dir}/vicinaext.sh.new"
+
+    if wget -qO "$temp_file" "$download_url"; then
+        chmod +x "$temp_file"
+        mv "$temp_file" "$0"
+        echo "Successfully updated to version ${version}"
+        echo "Please run the script again to use the new version"
+        return 0
+    else
+        rm -f "$temp_file"
+        echo "Error: Failed to download version ${version}" >&2
+        return 1
+    fi
+}
+
 show_version() {
-    echo "vicinaext version $VICINAEXT_VERSION"
-    echo "Vicinae extension installer"
+    echo "Vicinae Extension Installer (vicinaext.sh):"
+    echo "  - Current version: $VICINAEXT_VERSION"
+    if latest_version=$(getLatestScriptVersion); then
+        if [ "$latest_version" != "$VICINAEXT_VERSION" ]; then
+            echo "  - Latest version: $latest_version"
+            print_color "$ORANGE" "There is a newer vicinaext.sh version available for download!"
+            print_color "$ORANGE" "You can update the script with: $0 --update-script"
+        else
+            print_color "$GREEN" "You are running the latest vicinaext.sh version!"
+        fi
+    else
+        echo "Failed to check for latest vicinaext.sh version"
+    fi
 }
 
 #
@@ -382,6 +431,10 @@ while [ $# -gt 0 ]; do
             print_error "Option $1 requires an argument"
             exit 1
         fi
+        ;;
+    --update-script | -s)
+        updateScript
+        exit $?
         ;;
     -*)
         print_error "Unknown option: $1"
