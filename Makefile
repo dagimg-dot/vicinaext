@@ -1,30 +1,17 @@
-.PHONY: install test clean help
+.PHONY: bump-version release bump-and-release
+bump-version:
+	@echo "Bumping version to $(VERSION)"
+	@sed -i 's/VICINAEXT_VERSION=".*"/VICINAEXT_VERSION="$(VERSION)"/' vicinaext.sh
+	@sed -i 's|/releases/download/v[^/]*/vicinaext.sh|/releases/download/v$(VERSION)/vicinaext.sh|g' README.md
+	@git add vicinaext.sh README.md
+	@git commit -m "Bump version to $(VERSION)"
+	@git push
+	@echo "vicinaext version bumped to $(VERSION)"
 
-PREFIX ?= /usr/local
-BINDIR ?= $(PREFIX)/bin
+release:
+	@echo "Releasing version $(VERSION)"
+	@git tag v$(VERSION)
+	@git push origin v$(VERSION)
+	@echo "vicinaext version v$(VERSION) released"
 
-SCRIPT_NAME = vicinaext.sh
-SCRIPT_PATH = $(SCRIPT_NAME)
-
-help:
-	@echo "Available targets:"
-	@echo "  install  - Install vicinaext.sh to $(BINDIR)"
-	@echo "  test     - Run basic tests"
-	@echo "  clean    - Remove installed files"
-	@echo "  help     - Show this help message"
-
-install:
-	@echo "Installing $(SCRIPT_NAME) to $(BINDIR)..."
-	install -m 755 $(SCRIPT_PATH) $(BINDIR)/vicinaext
-	@echo "Installation complete. Make sure $(BINDIR) is in your PATH."
-
-test:
-	@echo "Running basic tests..."
-	@./$(SCRIPT_NAME) --version
-	@./$(SCRIPT_NAME) --help > /dev/null
-	@echo "Tests passed!"
-
-clean:
-	@echo "Removing $(SCRIPT_NAME) from $(BINDIR)..."
-	rm -f $(BINDIR)/vicinaext
-	@echo "Cleanup complete."
+bump-and-release: bump-version release

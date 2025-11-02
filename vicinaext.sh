@@ -20,6 +20,7 @@ trap 'printf "\nScript interrupted by user. Please clean up any temporary files 
 #H#   vicinaext https://github.com/user/monorepo.git extensions/my-extension
 #H#   vicinaext -o /custom/path https://github.com/user/extension.git
 #H#   vicinaext -p bun https://github.com/user/extension.git
+#H#   vicinaext -b develop https://github.com/user/extension.git
 #H#
 #H# Notice*:
 #H#   Extensions are installed to ~/.local/share/vicinae/extensions/
@@ -32,13 +33,14 @@ trap 'printf "\nScript interrupted by user. Please clean up any temporary files 
 #H#   -v --version         Shows the current script version
 #H#   -o --output <dir>    Output directory for extensions (default: ~/.local/share/vicinae/extensions)
 #H#   -p --package-manager <pm> Package manager to use (npm, yarn, pnpm, bun) (default: npm)
+#H#   -b --branch <branch> Git branch to clone (default: main or master)
 #H#
 
 #
 # Constants
 #
 VICINAE_EXTENSIONS_DIR="$HOME/.local/share/vicinae/extensions"
-SCRIPT_VERSION="1.0.0"
+VICINAEXT_VERSION="1.0.0"
 
 # Color definitions
 GREEN='\033[0;32m'
@@ -82,6 +84,7 @@ check_dependencies() {
 clone_repo() {
     local repo_url="$1"
     local folder="${2:-}"
+    local branch="${3:-}"
 
     if [ -n "$folder" ]; then
         local temp_dir
@@ -95,13 +98,26 @@ clone_repo() {
         git config core.sparseCheckout true
         echo "$folder/*" >>.git/info/sparse-checkout
 
-        # Try to pull from main first, then master
-        if ! git pull origin main >/dev/null 2>&1; then
-            if ! git pull origin master >/dev/null 2>&1; then
-                print_error "Failed to pull from repository. Check if the repository exists and is accessible"
-                rm -rf "$temp_dir"
-                exit 1
+        # Try to pull from specified branch, or main, or master
+        local pull_success=false
+        if [ -n "$branch" ]; then
+            if git pull origin "$branch" >/dev/null 2>&1; then
+                pull_success=true
             fi
+        fi
+
+        if [ "$pull_success" = false ]; then
+            if git pull origin main >/dev/null 2>&1; then
+                pull_success=true
+            elif git pull origin master >/dev/null 2>&1; then
+                pull_success=true
+            fi
+        fi
+
+        if [ "$pull_success" = false ]; then
+            print_error "Failed to pull from repository. Check if the repository exists and is accessible"
+            rm -rf "$temp_dir"
+            exit 1
         fi
 
         if [ -d "$folder" ]; then
@@ -127,10 +143,18 @@ clone_repo() {
         temp_dir=$(mktemp -d)
 
         echo "Cloning repository..." >&2
-        if ! git clone "$repo_url" "$temp_dir" >/dev/null 2>&1; then
-            print_error "Failed to clone repository. Check if the URL is correct and accessible"
-            rm -rf "$temp_dir"
-            exit 1
+        if [ -n "$branch" ]; then
+            if ! git clone -b "$branch" "$repo_url" "$temp_dir" >/dev/null 2>&1; then
+                print_error "Failed to clone branch '$branch'. Check if the branch exists"
+                rm -rf "$temp_dir"
+                exit 1
+            fi
+        else
+            if ! git clone "$repo_url" "$temp_dir" >/dev/null 2>&1; then
+                print_error "Failed to clone repository. Check if the URL is correct and accessible"
+                rm -rf "$temp_dir"
+                exit 1
+            fi
         fi
 
         echo "$temp_dir"
@@ -244,6 +268,7 @@ install_extension() {
     local folder="${2:-}"
     local output_dir="${3:-$VICINAE_EXTENSIONS_DIR}"
     local package_manager="${4:-npm}"
+    local branch="${5:-}"
 
     # Validate repo URL
     if [[ ! "$repo_url" =~ ^https?:// ]]; then
@@ -276,7 +301,7 @@ install_extension() {
     echo "Installing Vicinae extension: $extension_name"
 
     # Clone
-    if ! temp_dir=$(clone_repo "$repo_url" "$folder"); then
+    if ! temp_dir=$(clone_repo "$repo_url" "$folder" "$branch"); then
         print_error "Failed to clone repository"
         exit 1
     fi
@@ -284,6 +309,12 @@ install_extension() {
     # Build and install
     local target_dir="$output_dir/$extension_name"
     echo "Installing extension to $target_dir..."
+
+    # Create target directory and copy essential files
+    mkdir -p "$target_dir"
+    cd "$temp_dir"
+    [ -f "package.json" ] && cp "package.json" "$target_dir/"
+    [ -d "assets" ] && cp -r "assets" "$target_dir/" 2>/dev/null || true
 
     if ! build_extension "$temp_dir" "$target_dir" "$package_manager"; then
         print_error "Failed to build extension"
@@ -298,7 +329,7 @@ install_extension() {
 }
 
 show_version() {
-    echo "vicinaext.sh version $SCRIPT_VERSION"
+    echo "vicinaext version $VICINAEXT_VERSION"
     echo "Vicinae extension installer"
 }
 
@@ -311,6 +342,7 @@ check_dependencies
 # Parse arguments
 output_dir="$VICINAE_EXTENSIONS_DIR"
 package_manager="npm"
+branch=""
 repo_url=""
 folder=""
 
@@ -342,6 +374,15 @@ while [ $# -gt 0 ]; do
             exit 1
         fi
         ;;
+    --branch | -b)
+        if [ $# -gt 1 ] && [[ "$2" != -* ]]; then
+            branch="$2"
+            shift 2
+        else
+            print_error "Option $1 requires an argument"
+            exit 1
+        fi
+        ;;
     -*)
         print_error "Unknown option: $1"
         help
@@ -367,4 +408,4 @@ if [ -z "$repo_url" ]; then
     exit 1
 fi
 
-install_extension "$repo_url" "$folder" "$output_dir" "$package_manager"
+install_extension "$repo_url" "$folder" "$output_dir" "$package_manager" "$branch"

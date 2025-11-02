@@ -1,0 +1,22 @@
+name: Vicinaext Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Upload vicinaext.sh to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: vicinaext.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

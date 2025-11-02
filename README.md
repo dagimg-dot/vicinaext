@@ -3,21 +3,24 @@
 A simple, single-file Bash utility for installing Vicinae extensions from git repositories. Supports both full repository cloning and sparse checkout for specific folders within monorepos.
 
 <div align="center">
-  <img src="https://via.placeholder.com/200x200/4A90E2/FFFFFF?text=VICINAE" width="200" height="200">
+  <img src="./assets/vicinae.png" width="200" height="200">
 </div>
 
 ## ✨ Features
 
-- 🔄 **Smart Cloning**: Full repository or sparse checkout for specific folders
-- 🏗️ **Flexible Building**: Tries `npm run build` first, falls back to `npx vici build`
-- 📁 **Organized Installation**: Extensions installed to `~/.local/share/vicinae/extensions/`
-- 🧹 **Clean Process**: Uses `/tmp` for cloning, automatic cleanup
-- 🛡️ **Error Handling**: Comprehensive validation and error messages
-- 🎨 **Color Output**: Clear success/warning/error messages
+- **Smart Cloning**: Full repository or sparse checkout for specific folders
+- **Flexible Building**: Tries `npm run build` first, falls back to `npx vici build`
+- **Organized Installation**: Extensions installed to `~/.local/share/vicinae/extensions/`
+- **Clean Process**: Uses `/tmp` for cloning, automatic cleanup
 
 ## 🚀 Installation
 
-### Option 1: Direct Download
+### Install with [eget](https://github.com/zyedidia/eget) (Recommended)
+```bash
+eget dagimg-dot/vicinaext --to $HOME/.local/bin
+```
+
+### Direct Download
 
 ```bash
 # Download and install to local bin
@@ -27,7 +30,7 @@ chmod +x $HOME/.local/bin/vicinaext
 # Ensure ~/.local/bin is in your PATH
 ```
 
-### Option 2: Use as Local Script
+### Use as Local Script
 
 ```bash
 curl -L -o vicinaext.sh https://github.com/yourusername/vicinaext/raw/main/vicinaext.sh
@@ -52,11 +55,13 @@ vicinaext.sh — Vicinae extension installer
 Examples:
   vicinaext https://github.com/user/extension-repo.git
   vicinaext https://github.com/user/extension-repo.git my-extension
+  vicinaext https://github.com/user/monorepo.git extensions/my-extension
 
 Notice*:
-  Extensions are installed to ~/.local/share/vicinae/extensions/
-  The script clones to /tmp for sparse checkout when a folder is specified
-  Build process tries 'npm run build' first, then 'npx vici build'
+  - Extensions are installed to ~/.local/share/vicinae/extensions/
+  - The script clones to /tmp for sparse checkout when a folder is specified
+  - Folder parameter supports paths (e.g., extensions/my-extension)
+  - Build process uses specified package manager (npm/yarn/pnpm/bun) with fallback to vici build
 
 Options:
   -h --help            Shows this message
@@ -84,8 +89,11 @@ vicinaext -p yarn https://github.com/user/extension.git
 # Use bun
 vicinaext -p bun https://github.com/user/extension.git
 
+# Use a specific branch
+vicinaext -b develop https://github.com/user/extension.git
+
 # Combine options
-vicinaext -p pnpm -o /custom/extensions https://github.com/user/repo.git extensions/theme
+vicinaext -p pnpm -o /custom/extensions -b feature-branch https://github.com/user/repo.git extensions/theme
 
 # Check version information
 vicinaext --version
@@ -115,22 +123,6 @@ vicinaext https://github.com/user/monorepo.git extensions/my-extension
 2. Supports both simple folder names and nested paths (e.g., `extensions/my-extension`)
 3. Continues with the same build and install process as above
 4. Uses the last part of the path as the extension name
-
-## 📁 Directory Structure
-
-Extensions are installed in an organized structure:
-
-```
-~/.local/share/vicinae/extensions/
-├── my-extension/
-│   ├── manifest.json
-│   ├── main.js
-│   └── assets/
-├── theme-dark-mode/
-│   ├── styles.css
-│   └── config.json
-└── ...
-```
 
 ## 🛠️ Requirements
 
@@ -193,15 +185,14 @@ This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
-- Inspired by the excellent [cvm.sh](https://github.com/dagimg-dot/cvm) project
 - Built for the Vicinae community
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for Vicinae extension developers**
+**Made with ❤️ for Vicinae extension users**
 
-[⭐ Star us on GitHub](https://github.com/yourusername/vicinaext) • [🐛 Report Issues](https://github.com/yourusername/vicinaext/issues)
+[⭐ Star us on GitHub](https://github.com/dagimg-dot/vicinaext) • [🐛 Report Issues](https://github.com/dagimg-dot/vicinaext/issues)
 
 </div>
