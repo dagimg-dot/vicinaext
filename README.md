@@ -179,20 +179,10 @@ vicinaext -p bun https://github.com/user/extension.git
 - The script installs to user directories, no sudo required
 - Ensure `~/.local/share/vicinae/extensions/` is writable
 
-**Extension not loading in Vicinae?**
-- Check the installed extension structure
-- Verify `manifest.json` is present and valid
-- Restart Vicinae after installation
-
 ## 📄 License
 
 This project is licensed under the MIT License.
 
-## 🙏 Acknowledgments
-
-- Built for the Vicinae community
-
----
 
 <div align="center">
 
