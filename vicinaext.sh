@@ -21,6 +21,7 @@ trap 'printf "\nScript interrupted by user. Please clean up any temporary files 
 #H#   vicinaext -o /custom/path https://github.com/user/extension.git
 #H#   vicinaext -p bun https://github.com/user/extension.git
 #H#   vicinaext -b develop https://github.com/user/extension.git
+#H#   vicinaext -f https://github.com/user/extension.git
 #H#
 #H# Notice*:
 #H#   Extensions are installed to ~/.local/share/vicinae/extensions/
@@ -34,6 +35,7 @@ trap 'printf "\nScript interrupted by user. Please clean up any temporary files 
 #H#   -o --output <dir>    Output directory for extensions (default: ~/.local/share/vicinae/extensions)
 #H#   -p --package-manager <pm> Package manager to use (npm, yarn, pnpm, bun) (default: npm)
 #H#   -b --branch <branch> Git branch to clone (default: main or master)
+#H#   -f --force           Force reinstall by deleting existing extension directory
 #H#   -s --update-script   Updates the script to the latest version
 #H#
 
@@ -269,6 +271,7 @@ install_extension() {
     local output_dir="${3:-$VICINAE_EXTENSIONS_DIR}"
     local package_manager="${4:-npm}"
     local branch="${5:-}"
+    local force="${6:-false}"
 
     # Validate repo URL
     if [[ ! "$repo_url" =~ ^https?:// ]]; then
@@ -309,6 +312,12 @@ install_extension() {
     # Build and install
     local target_dir="$output_dir/$extension_name"
     echo "Installing extension to $target_dir..."
+
+    # If force flag is set and directory exists, remove it
+    if [ "$force" = true ] && [ -d "$target_dir" ]; then
+        echo "Force flag enabled. Removing existing extension directory..."
+        rm -rf "$target_dir"
+    fi
 
     # Create target directory and copy essential files
     mkdir -p "$target_dir"
@@ -394,6 +403,7 @@ package_manager="npm"
 branch=""
 repo_url=""
 folder=""
+force=false
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -432,6 +442,10 @@ while [ $# -gt 0 ]; do
             exit 1
         fi
         ;;
+    --force | -f)
+        force=true
+        shift
+        ;;
     --update-script | -s)
         updateScript
         exit $?
@@ -461,4 +475,4 @@ if [ -z "$repo_url" ]; then
     exit 1
 fi
 
-install_extension "$repo_url" "$folder" "$output_dir" "$package_manager" "$branch"
+install_extension "$repo_url" "$folder" "$output_dir" "$package_manager" "$branch" "$force"
